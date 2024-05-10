@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Чат-бот</title>
+    <style>
+      :root {
+        --primary-color: #6600CC;
+        --secondary-color: #6c757d;
+        --light-color: #f8f9fa;
+        --dark-color: #212529;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: var(--light-color);
+        color: var(--dark-color);
+      }
+
+      .chat-container {
+        width: 800px;
+        height: 700px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .chat-header {
+        background-color: var(--primary-color);
+        color: #fff;
+        padding: 10px;
+        text-align: center;
+      }
+
+      .chat-messages {
+        flex-grow: 1;
+        padding: 10px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .message {
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 10px;
+        max-width: 80%;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+      }
+
+      .user-message {
+        background-color: #129946;
+        color: rgb(255, 255, 255);
+        align-self: flex-end;
+        margin-left: auto;
+      }
+
+      .bot-message {
+        background-color: #212529;
+        color: #fff;
+        align-self: flex-start;
+      }
+
+      .chat-input {
+        display: flex;
+        padding: 10px;
+        background-color: var(--light-color);
+      }
+
+      .chat-input input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid var(--secondary-color);
+        border-radius: 20px;
+        outline: none;
+      }
+
+      .chat-input button {
+        margin-left: 10px;
+        padding: 10px 20px;
+        background-color: var(--primary-color);
+        color: #ffffff;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <div class="chat-header">
+        <h2>Чат-бот</h2>
+      </div>
+      <div class="chat-messages">
+        <div class="message bot-message">
+          <p>Привет! Я ИИ-бот. Задавайте мне любые вопросы.</p>
+        </div>
+      </div>
+      <div class="chat-input">
+        <input type="text" placeholder="Введите сообщение..." autofocus />
+        <button>Отправить</button>
+      </div>
+    </div>
+    <script>
+      const chatMessages = document.querySelector(".chat-messages");
+      const chatInput = document.querySelector(".chat-input input");
+      const sendButton = document.querySelector(".chat-input button");
+      let isTyping = false;
+
+      sendButton.addEventListener("click", sendMessage);
+      chatInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          sendMessage();
+        }
+      });
+
+      async function sendMessage() {
+        const message = chatInput.value.trim();
+        if (message) {
+          const userMessage = document.createElement("div");
+          userMessage.classList.add("message", "user-message");
+          userMessage.textContent = message;
+          chatMessages.appendChild(userMessage);
+          chatInput.value = "";
+
+          const botMessage = document.createElement("div");
+          botMessage.classList.add("message", "bot-message");
+          chatMessages.appendChild(botMessage);
+
+          isTyping = true;
+          botMessage.innerHTML = "";
+          typeMessage(
+            botMessage,
+            await fetch(`/gpt/chatting/${encodeURIComponent(message)}`)
+          );
+
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+      }
+
+      async function typeMessage(element, fetchPromise) {
+        const response = await fetchPromise;
+        let text = await response.text();
+        text = text
+          .replace(/^"|"$/g, "")
+          .replace(/\\n/g, "<br>")
+          .replace(/\\"/g, '"');
+        const letters = text.split("");
+        let i = 0;
+
+        function typeNextLetter() {
+          if (i < letters.length) {
+            if (
+              letters[i] === "<" &&
+              letters[i + 1] === "b" &&
+              letters[i + 2] === "r" &&
+              letters[i + 3] === ">"
+            ) {
+              element.innerHTML += "<br>";
+              i += 4;
+            } else {
+              element.innerHTML +=
+                letters[i] === "<"
+                  ? letters[i]
+                  : letters[i].replace(/</g, "&lt;").replace(/>/g, "&gt;");
+              i++;
+            }
+            setTimeout(typeNextLetter, 50);
+          } else {
+            isTyping = false;
+          }
+        }
+
+        typeNextLetter();
+      }
+    </script>
+  </body>
+</html>
